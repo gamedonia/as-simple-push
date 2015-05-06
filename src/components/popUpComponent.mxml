@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SkinnablePopUpContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+						   xmlns:s="library://ns.adobe.com/flex/spark" 
+						   xmlns:mx="library://ns.adobe.com/flex/mx" width="1000" height="300">
+	<fx:Script>
+		<![CDATA[
+			import mx.core.FlexGlobals;
+			
+			import spark.components.View;
+			
+			private var activeView:View;
+			[Bindable]
+			private var message:String = "";
+			
+			public function show(msg:String = ""):void
+			{
+				activeView = FlexGlobals.topLevelApplication.navigator.activeView;
+				
+				this.message = msg;
+				this.center();
+				this.open(activeView, true);
+				
+			}
+			
+			public function center():void
+			{
+				
+				this.width = activeView.width * 0.7;
+				this.height = activeView.height * 0.35;
+				
+				var newX:Number = (activeView.width / 2) - (this.width /2);
+				var newY:Number = (activeView.height / 2) - (this.height/2);
+				
+				this.x = newX;
+				this.y = newY;
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<s:Panel title="Error">
+		<s:VGroup width="{this.width}" height="{this.height}" horizontalAlign="center"
+				  paddingTop="20" gap="20">
+			<s:Label text="{this.message}"/>
+			<s:Button label="OK" click="close();"/>
+		</s:VGroup>
+	</s:Panel>
+	
+</s:SkinnablePopUpContainer>

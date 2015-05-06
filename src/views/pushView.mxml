@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" title="pushView"  actionBarVisible="false" creationComplete="initView()">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			
+			import com.gamedonia.sdk.Gamedonia;
+			import com.gamedonia.sdk.Credentials;
+			import com.gamedonia.sdk.GDOptions;
+			import com.gamedonia.sdk.GDUser;
+			import com.gamedonia.sdk.GDUserProfile;
+			import com.gamedonia.sdk.GamedoniaPush;
+			import com.gamedonia.sdk.GamedoniaPushEvent;
+			import com.gamedonia.sdk.GamedoniaScripts;
+			import com.gamedonia.sdk.GamedoniaUsers;
+			import com.gamedonia.sdk.openudid.OpenUDID;
+
+			import components.popUpComponent;
+			
+			private static var _openUDID:OpenUDID;
+			
+			private static const API_KEY:String = "";
+			private static const SECRET:String = "";
+			
+			public static var popup:popUpComponent = new popUpComponent();
+			
+			protected function initView():void {
+				
+				// Set constraints
+				var left_constraint:Number = this.parent.width - this.parent.width*0.78;
+				
+				console_label.setConstraintValue("left", left_constraint);
+				textArea.setConstraintValue("left", left_constraint);
+				generate_button.setConstraintValue("left", left_constraint);
+				
+				var options:GDOptions = new GDOptions();
+				
+				// Enable push notifications
+				options.push = true;
+				
+				// Initialize
+				if ( API_KEY == "" || SECRET == "" ) {
+					
+					popup.show ( "Missing Api Key/Secret.\nCheck the README.txt." );
+
+				} else {
+					
+					Gamedonia.initializeWithOptions( API_KEY, SECRET, "http://api.gamedonia.com", "v1", options );
+					
+					// Register for push notifications
+					GamedoniaPush.instance.addEventListener( GamedoniaPushEvent.TOKEN_SUCCESS, onTokenSuccess );
+					GamedoniaPush.instance.addEventListener( GamedoniaPushEvent.TOKEN_FAIL, onTokenFail );
+					GamedoniaPush.instance.addEventListener( GamedoniaPushEvent.REMOTE_NOTIFICATION_RECEIVED, onRemoteNotification );
+					
+					_openUDID = OpenUDID.instance;
+					var udid:String = _openUDID.getValue();
+					
+					var credentials:Credentials = new Credentials();
+					credentials.open_udid = udid;
+					
+					var user:GDUser = new GDUser();
+					user.credentials = credentials;
+					
+					GamedoniaUsers.createUser(user, function ( create_success:Boolean ):void { 
+						
+						GamedoniaUsers.loginUserWithOpenUDID( function ( login_success:Boolean ):void {
+							
+							printText( "Starting session with Gamedonia..." );
+							
+							if ( login_success ) {
+								
+								processLogin();
+								
+							} else {
+								
+								trace( "Login failed." );
+							}
+						});
+					});
+				}				
+			}
+			
+			private function processLogin():void {
+				
+				GamedoniaUsers.getMe( function( success:Boolean, me:GDUserProfile ):void {
+					
+					if ( success ) {
+						
+						var uid:String;
+						uid = me._id;
+						printText( "Session started successfully\nuid: " + uid );
+						
+					} else {
+						
+						trace( "Get me failed." );
+					}
+				});
+				
+			}
+			
+			private function generate_clickHandler():void {
+				
+				printText( "Requesting server to send push..." );
+				
+				GamedoniaScripts.run( "sendpush", {}, function ( success:Boolean, data:Object ):void {
+					
+					if ( success ) {
+						
+						printText( "Push requested successfully." );
+						
+					} else {
+						
+						printText( "Failed request for server push." );
+					}
+					
+				});
+				
+			}
+			
+			private function onTokenSuccess( event:GamedoniaPushEvent ):void {
+				
+				trace( "token success" );
+			}
+			
+			private function onTokenFail( event:GamedoniaPushEvent ):void {
+				
+				trace( "token fail" );
+			}
+			
+			private function onRemoteNotification( event:GamedoniaPushEvent ):void {
+				
+				trace( "Remote notification received: " + event.remoteNotification );
+				printText( event.remoteNotification.message );
+			}
+			
+			protected function printText( s:String ):void {
+				
+				textArea.appendText( s + "\n\n" );
+			}
+			
+		]]>
+	</fx:Script>
+	<s:BitmapImage source="@Embed('../assets/background@2x.png')" 
+				   left="0" right="0"  
+				   width="100%" height="100%" 
+				   />
+	<s:Label id="console_label" y="28" left="70" width="109" fontFamily="Arial" fontSize="15" fontWeight="bold"
+			 text="Console Log:"/>
+	<s:TextArea id="textArea" left="70" right="10" top="51" bottom="61" borderVisible="false"
+				contentBackgroundColor="#FFFFFF" editable="false"/>
+	<s:Button id="generate_button" left="70" right="10" bottom="10"
+			  label="Generate Push with Server Code" chromeColor="#6eac2b"
+			  click="generate_clickHandler()" color="#FFFFFF" fontFamily="Arial" fontSize="14"
+			  textShadowAlpha="0"/>
+</s:View>
